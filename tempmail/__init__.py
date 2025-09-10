@@ -8,8 +8,6 @@ from .models import (
     Domain,
     EmailAddress,
     EmailMessage,
-    CreateEmailOptions,
-    ListMessagesOptions,
 )
 from .exceptions import (
     TempMailError,
@@ -25,8 +23,6 @@ __all__ = [
     "Domain",
     "EmailAddress",
     "EmailMessage",
-    "CreateEmailOptions",
-    "ListMessagesOptions",
     "TempMailError",
     "AuthenticationError",
     "RateLimitError",

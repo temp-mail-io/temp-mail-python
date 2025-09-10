@@ -31,17 +31,6 @@ class TempMailClient:
         base_url: str = "https://api.temp-mail.io",
         timeout: int = 30,
     ):
-        """
-        Initialize the Temp Mail client.
-
-        Args:
-            api_key: Your Temp Mail API key
-            base_url: Base URL for the API (default: https://api.temp-mail.io)
-            timeout: Request timeout in seconds (default: 30)
-        """
-        if not api_key:
-            raise AuthenticationError("API key is required")
-
         self.api_key = api_key
         self.base_url = base_url
         self.timeout = timeout
