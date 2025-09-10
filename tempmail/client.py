@@ -2,17 +2,16 @@
 
 import json
 import time
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any
 from urllib.parse import urljoin
 import requests
 
+from . import __version__
 from .models import (
     RateLimit,
     Domain,
     EmailAddress,
     EmailMessage,
-    CreateEmailOptions,
-    ListMessagesOptions,
 )
 from .exceptions import (
     TempMailError,
@@ -29,18 +28,16 @@ class TempMailClient:
     def __init__(
         self,
         api_key: str,
-        base_url: str = "https://api.temp-mail.org",
+        base_url: str = "https://api.temp-mail.io",
         timeout: int = 30,
-        max_retries: int = 3,
     ):
         """
         Initialize the Temp Mail client.
 
         Args:
             api_key: Your Temp Mail API key
-            base_url: Base URL for the API (default: https://api.temp-mail.org)
+            base_url: Base URL for the API (default: https://api.temp-mail.io)
             timeout: Request timeout in seconds (default: 30)
-            max_retries: Maximum number of retry attempts (default: 3)
         """
         if not api_key:
             raise AuthenticationError("API key is required")
@@ -48,13 +45,12 @@ class TempMailClient:
         self.api_key = api_key
         self.base_url = base_url
         self.timeout = timeout
-        self.max_retries = max_retries
 
         self.session = requests.Session()
         self.session.headers.update({
-            "Authorization": f"Bearer {api_key}",
+            "X-API-Key": api_key,
             "Content-Type": "application/json",
-            "User-Agent": "temp-mail-python/1.0.0",
+            "User-Agent": f"temp-mail-python/{__version__}",
         })
 
         self._last_rate_limit: Optional[RateLimit] = None
@@ -69,90 +65,88 @@ class TempMailClient:
         """Make an HTTP request to the API."""
         url = urljoin(self.base_url, endpoint)
 
-        for attempt in range(self.max_retries + 1):
-            try:
-                response = self.session.request(
-                    method=method,
-                    url=url,
-                    params=params,
-                    json=json_data,
-                    timeout=self.timeout,
+        try:
+            response = self.session.request(
+                method=method,
+                url=url,
+                params=params,
+                json=json_data,
+                timeout=self.timeout,
+            )
+
+            # Update rate limit info from headers
+            self._update_rate_limit_from_headers(response.headers)
+
+            # Handle different status codes
+            if response.status_code >= 200 and response.status_code < 300:
+                return response.json()
+            elif response.status_code == 401:
+                raise AuthenticationError("Invalid API key")
+            elif response.status_code == 429:
+                raise RateLimitError("Rate limit exceeded")
+            elif response.status_code == 400:
+                error_data = response.json() if response.content else {}
+                error_message = self._extract_error_message(error_data, "Invalid request parameters")
+                raise ValidationError(error_message)
+            else:
+                error_data = response.json() if response.content else {}
+                error_message = self._extract_error_message(
+                    error_data,
+                    f"API request failed with status {response.status_code}"
+                )
+                raise APIError(
+                    error_message,
+                    status_code=response.status_code,
+                    response_data=error_data,
                 )
 
-                # Update rate limit info from headers
-                self._update_rate_limit_from_headers(response.headers)
+        except requests.exceptions.RequestException as e:
+            raise TempMailError(f"Request failed: {str(e)}")
 
-                # Handle different status codes
-                if response.status_code == 200 or response.status_code == 201:
-                    return response.json()
-                elif response.status_code == 401:
-                    raise AuthenticationError("Invalid API key")
-                elif response.status_code == 429:
-                    raise RateLimitError("Rate limit exceeded")
-                elif response.status_code == 400:
-                    error_data = response.json() if response.content else {}
-                    raise ValidationError(
-                        error_data.get("message", "Invalid request parameters")
-                    )
-                else:
-                    error_data = response.json() if response.content else {}
-                    raise APIError(
-                        error_data.get(
-                            "message",
-                            f"API request failed with status {response.status_code}",
-                        ),
-                        status_code=response.status_code,
-                        response_data=error_data,
-                    )
+    def _extract_error_message(self, error_data: Dict[str, Any], default_message: str) -> str:
+        """Extract error message from API response."""
+        # Try new API format: {"error": {"detail": "message"}}
+        if "error" in error_data and isinstance(error_data["error"], dict):
+            error_obj = error_data["error"]
+            if "detail" in error_obj:
+                return str(error_obj["detail"])
+            if "message" in error_obj:
+                return str(error_obj["message"])
 
-            except requests.exceptions.RequestException as e:
-                if attempt == self.max_retries:
-                    raise TempMailError(
-                        f"Request failed after {self.max_retries + 1} attempts: {str(e)}"
-                    )
-                time.sleep(2**attempt)  # Exponential backoff
+        # Try old format: {"message": "error"}
+        if "message" in error_data:
+            return str(error_data["message"])
 
-        # This should never be reached due to the raise in the except block
-        raise TempMailError("Unexpected error in request handling")
+        return default_message
 
     def _update_rate_limit_from_headers(self, headers: Any) -> None:
         """Update rate limit info from response headers."""
-        try:
-            if "X-RateLimit-Limit" in headers:
-                self._last_rate_limit = RateLimit(
-                    limit=int(headers["X-RateLimit-Limit"]),
-                    remaining=int(headers.get("X-RateLimit-Remaining", 0)),
-                    reset=int(headers.get("X-RateLimit-Reset", 0)),
-                )
-        except (ValueError, KeyError):
-            pass
+        self._last_rate_limit = RateLimit(
+            limit=int(headers["X-RateLimit-Limit"]),
+            remaining=int(headers.get("X-RateLimit-Remaining", 0)),
+            reset=int(headers.get("X-RateLimit-Reset", 0)),
+        )
 
     def create_email(
-        self, options: Optional[CreateEmailOptions] = None
+        self, email: Optional[str] = None, domain: Optional[str] = None, domain_type: Optional[str] = None,
     ) -> EmailAddress:
         """
-        Generate a new temporary email address.
-
-        Args:
-            options: Configuration options for email creation
-
-        Returns:
-            EmailAddress: The generated email address
+        Create a new temporary email address.
+        :param email: Optional specific email address to create
+        :param domain: Optional domain to use
+        :param domain_type: Optional domain type (e.g., "public", "custom", "premium")
         """
         params: Dict[str, Any] = {}
-        if options:
-            if options.domain:
-                params["domain"] = options.domain
-            if options.prefix:
-                params["prefix"] = options.prefix
+        if email:
+            params["email"] = email
+        if domain:
+            params["domain"] = domain
+        if domain_type:
+            params["domain_type"] = domain_type
 
-        data = self._make_request("POST", "/emails", params=params)
+        data = self._make_request("POST", "/v1/emails", params=params)
 
-        return EmailAddress(
-            email=data["email"],
-            domain=data["domain"],
-            created_at=data.get("created_at"),
-        )
+        return EmailAddress.from_json(data)
 
     def list_domains(self) -> List[Domain]:
         """
@@ -161,34 +155,14 @@ class TempMailClient:
         Returns:
             List[Domain]: Available domains
         """
-        data = self._make_request("GET", "/domains")
+        data = self._make_request("GET", "/v1/domains")
 
-        return [Domain(domain=domain) for domain in data.get("domains", [])]
+        return [Domain.from_json(domain) for domain in data["domains"]]
 
     def list_email_messages(
-        self, email: str, options: Optional[ListMessagesOptions] = None
+        self, email: str,
     ) -> List[EmailMessage]:
-        """
-        Get messages for a specific email address.
-
-        Args:
-            email: The email address to get messages for
-            options: Options for filtering messages
-
-        Returns:
-            List[EmailMessage]: List of email messages
-        """
-        if not email:
-            raise ValidationError("Email address is required")
-
-        params: Dict[str, Any] = {"email": email}
-        if options:
-            if options.limit:
-                params["limit"] = options.limit
-            if options.offset:
-                params["offset"] = options.offset
-
-        data = self._make_request("GET", "/messages", params=params)
+        data = self._make_request("GET", f"/v1/emails/{email}/messages")
 
         messages = []
         for msg_data in data.get("messages", []):
@@ -208,22 +182,10 @@ class TempMailClient:
         return messages
 
     def delete_message(self, message_id: str) -> bool:
-        """
-        Delete a specific message.
-
-        Args:
-            message_id: ID of the message to delete
-
-        Returns:
-            bool: True if deletion was successful
-        """
-        if not message_id:
-            raise ValidationError("Message ID is required")
-
-        self._make_request("DELETE", f"/messages/{message_id}")
+        self._make_request("DELETE", f"/v1/messages/{message_id}")
         return True
 
-    def get_rate_limit(self) -> Optional[RateLimit]:
+    def get_rate_limit(self) -> RateLimit:
         """
         Get current rate limit information.
 
@@ -231,7 +193,7 @@ class TempMailClient:
             RateLimit: Current rate limit status, or None if not available
         """
         # Make a lightweight request to get fresh rate limit info
-        self._make_request("GET", "/rate-limit")
+        self._make_request("GET", "/v1/rate-limit")
         return self._last_rate_limit
 
     @property

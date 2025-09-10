@@ -34,22 +34,17 @@ class TestTempMailClient:
         client = TempMailClient(
             "test-api-key",
             base_url="https://custom.api.com",
-            timeout=60,
-            max_retries=5
+            timeout=60
         )
         assert client.base_url == "https://custom.api.com"
         assert client.timeout == 60
-        assert client.max_retries == 5
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch('tempmail.client.requests.Session.request')
     def test_create_email_success(self, mock_request):
         """Test successful email creation."""
         mock_response = Mock()
         mock_response.status_code = 201
-        mock_response.json.return_value = {
-            "email": "test@example.com",
-            "domain": "example.com",
-        }
+        mock_response.json.return_value = {"email": "test@example.com", "domain": "example.com"}
         mock_response.headers = {}
         mock_request.return_value = mock_response
 
@@ -60,15 +55,12 @@ class TestTempMailClient:
         assert email.email == "test@example.com"
         assert email.domain == "example.com"
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch('tempmail.client.requests.Session.request')
     def test_create_email_with_options(self, mock_request):
         """Test email creation with options."""
         mock_response = Mock()
         mock_response.status_code = 201
-        mock_response.json.return_value = {
-            "email": "custom@mydomain.com",
-            "domain": "mydomain.com",
-        }
+        mock_response.json.return_value = {"email": "custom@mydomain.com", "domain": "mydomain.com"}
         mock_response.headers = {}
         mock_request.return_value = mock_response
 
@@ -82,16 +74,14 @@ class TestTempMailClient:
         # Verify request was made with correct parameters
         mock_request.assert_called_once()
         call_args = mock_request.call_args
-        assert call_args[1]["params"] == {"domain": "mydomain.com", "prefix": "custom"}
+        assert call_args[1]['params'] == {"domain": "mydomain.com", "prefix": "custom"}
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch('tempmail.client.requests.Session.request')
     def test_list_domains_success(self, mock_request):
         """Test successful domain listing."""
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "domains": ["example.com", "test.org", "temp.io"]
-        }
+        mock_response.json.return_value = {"domains": ["example.com", "test.org", "temp.io"]}
         mock_response.headers = {}
         mock_request.return_value = mock_response
 
@@ -104,7 +94,7 @@ class TestTempMailClient:
         assert domains[1].domain == "test.org"
         assert domains[2].domain == "temp.io"
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch('tempmail.client.requests.Session.request')
     def test_list_email_messages_success(self, mock_request):
         """Test successful message listing."""
         mock_response = Mock()
@@ -118,7 +108,7 @@ class TestTempMailClient:
                     "subject": "Test Subject",
                     "body_text": "Test body",
                     "body_html": "<p>Test body</p>",
-                    "created_at": "2023-01-01T00:00:00Z",
+                    "created_at": "2023-01-01T00:00:00Z"
                 }
             ]
         }
@@ -138,7 +128,7 @@ class TestTempMailClient:
         assert message.body_text == "Test body"
         assert message.body_html == "<p>Test body</p>"
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch('tempmail.client.requests.Session.request')
     def test_list_email_messages_with_options(self, mock_request):
         """Test message listing with options."""
         mock_response = Mock()
@@ -155,7 +145,7 @@ class TestTempMailClient:
         mock_request.assert_called_once()
         call_args = mock_request.call_args
         expected_params = {"email": "test@temp.io", "limit": 10, "offset": 5}
-        assert call_args[1]["params"] == expected_params
+        assert call_args[1]['params'] == expected_params
 
     def test_list_email_messages_no_email(self):
         """Test message listing fails without email."""
@@ -163,7 +153,7 @@ class TestTempMailClient:
         with pytest.raises(ValidationError, match="Email address is required"):
             client.list_email_messages("")
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch('tempmail.client.requests.Session.request')
     def test_delete_message_success(self, mock_request):
         """Test successful message deletion."""
         mock_response = Mock()
@@ -180,8 +170,8 @@ class TestTempMailClient:
         # Verify correct endpoint was called
         mock_request.assert_called_once()
         call_args = mock_request.call_args
-        assert "/messages/msg123" in call_args[1]["url"]
-        assert call_args[1]["method"] == "DELETE"
+        assert "/messages/msg123" in call_args[1]['url']
+        assert call_args[1]['method'] == "DELETE"
 
     def test_delete_message_no_id(self):
         """Test message deletion fails without message ID."""
@@ -189,12 +179,12 @@ class TestTempMailClient:
         with pytest.raises(ValidationError, match="Message ID is required"):
             client.delete_message("")
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch('tempmail.client.requests.Session.request')
     def test_authentication_error(self, mock_request):
         """Test authentication error handling."""
         mock_response = Mock()
         mock_response.status_code = 401
-        mock_response.content = b""
+        mock_response.content = b''
         mock_response.headers = {}
         mock_request.return_value = mock_response
 
@@ -202,12 +192,12 @@ class TestTempMailClient:
         with pytest.raises(AuthenticationError, match="Invalid API key"):
             client.create_email()
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch('tempmail.client.requests.Session.request')
     def test_rate_limit_error(self, mock_request):
         """Test rate limit error handling."""
         mock_response = Mock()
         mock_response.status_code = 429
-        mock_response.content = b""
+        mock_response.content = b''
         mock_response.headers = {}
         mock_request.return_value = mock_response
 
@@ -215,7 +205,7 @@ class TestTempMailClient:
         with pytest.raises(RateLimitError, match="Rate limit exceeded"):
             client.create_email()
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch('tempmail.client.requests.Session.request')
     def test_validation_error(self, mock_request):
         """Test validation error handling."""
         mock_response = Mock()
@@ -229,7 +219,7 @@ class TestTempMailClient:
         with pytest.raises(ValidationError, match="Invalid domain"):
             client.create_email()
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch('tempmail.client.requests.Session.request')
     def test_api_error(self, mock_request):
         """Test generic API error handling."""
         mock_response = Mock()
@@ -246,7 +236,7 @@ class TestTempMailClient:
         assert exc_info.value.status_code == 500
         assert "Internal server error" in str(exc_info.value)
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch('tempmail.client.requests.Session.request')
     def test_rate_limit_headers(self, mock_request):
         """Test rate limit information from headers."""
         mock_response = Mock()
@@ -255,7 +245,7 @@ class TestTempMailClient:
         mock_response.headers = {
             "X-RateLimit-Limit": "100",
             "X-RateLimit-Remaining": "95",
-            "X-RateLimit-Reset": "1640995200",
+            "X-RateLimit-Reset": "1640995200"
         }
         mock_request.return_value = mock_response
 
@@ -267,41 +257,14 @@ class TestTempMailClient:
         assert rate_limit.remaining == 95
         assert rate_limit.reset == 1640995200
 
-    @patch("tempmail.client.requests.Session.request")
-    def test_retry_on_request_exception(self, mock_request):
-        """Test retry mechanism on request exceptions."""
-        from requests.exceptions import ConnectionError
-
-        # Mock to fail 2 times then succeed
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"domains": []}
-        mock_response.headers = {}
-
-        mock_request.side_effect = [
-            ConnectionError("Connection failed"),
-            ConnectionError("Connection failed"),
-            mock_response,
-        ]
-
-        client = TempMailClient("test-api-key")
-
-        with patch("time.sleep"):  # Mock sleep to speed up test
-            domains = client.list_domains()
-
-        assert len(domains) == 0
-        assert mock_request.call_count == 3
-
-    @patch("tempmail.client.requests.Session.request")
-    def test_max_retries_exceeded(self, mock_request):
-        """Test failure after max retries exceeded."""
+    @patch('tempmail.client.requests.Session.request')
+    def test_request_exception(self, mock_request):
+        """Test handling of request exceptions."""
         from requests.exceptions import ConnectionError
         from tempmail.exceptions import TempMailError
 
         mock_request.side_effect = ConnectionError("Connection failed")
 
         client = TempMailClient("test-api-key")
-
-        with patch("time.sleep"):  # Mock sleep to speed up test
-            with pytest.raises(TempMailError, match="Request failed after 4 attempts"):
-                client.list_domains()
+        with pytest.raises(TempMailError, match="Request failed"):
+            client.list_domains()

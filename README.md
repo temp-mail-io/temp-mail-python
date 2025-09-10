@@ -53,9 +53,8 @@ client = TempMailClient("your-api-key")
 # With custom parameters
 client = TempMailClient(
     "your-api-key",
-    base_url="https://api.temp-mail.org",
-    timeout=30,
-    max_retries=3
+    base_url="https://api.temp-mail.io",
+    timeout=30
 )
 ```
 

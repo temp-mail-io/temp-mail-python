@@ -17,17 +17,29 @@ class RateLimit:
 @dataclass
 class Domain:
     """Email domain information."""
+    name: str
+    type: str # e.g., "public", "custom", "premium"
 
-    domain: str
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]) -> 'Domain':
+        return cls(
+            name=data['name'],
+            type=data['type']
+        )
 
 
 @dataclass
 class EmailAddress:
     """Generated temporary email address."""
-
     email: str
-    domain: str
-    created_at: Optional[datetime] = None
+    ttl: int # Time to live in seconds
+
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]) -> 'EmailAddress':
+        return cls(
+            email=data['email'],
+            ttl=data['ttl']
+        )
 
 
 @dataclass
@@ -42,19 +54,3 @@ class EmailMessage:
     body_html: Optional[str] = None
     created_at: Optional[datetime] = None
     attachments: Optional[List[Dict[str, Any]]] = None
-
-
-@dataclass
-class CreateEmailOptions:
-    """Options for creating a new email address."""
-
-    domain: Optional[str] = None
-    prefix: Optional[str] = None
-
-
-@dataclass
-class ListMessagesOptions:
-    """Options for listing email messages."""
-
-    limit: Optional[int] = None
-    offset: Optional[int] = None
