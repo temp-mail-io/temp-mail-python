@@ -1,7 +1,5 @@
 """Temp Mail API client implementation."""
 
-import json
-import time
 from typing import Optional, List, Dict, Any
 from urllib.parse import urljoin
 import requests
@@ -36,11 +34,13 @@ class TempMailClient:
         self.timeout = timeout
 
         self.session = requests.Session()
-        self.session.headers.update({
-            "X-API-Key": api_key,
-            "Content-Type": "application/json",
-            "User-Agent": f"temp-mail-python/{__version__}",
-        })
+        self.session.headers.update(
+            {
+                "X-API-Key": api_key,
+                "Content-Type": "application/json",
+                "User-Agent": f"temp-mail-python/{__version__}",
+            }
+        )
 
         self._last_rate_limit: Optional[RateLimit] = None
 
@@ -75,13 +75,14 @@ class TempMailClient:
                 raise RateLimitError("Rate limit exceeded")
             elif response.status_code == 400:
                 error_data = response.json() if response.content else {}
-                error_message = self._extract_error_message(error_data, "Invalid request parameters")
+                error_message = self._extract_error_message(
+                    error_data, "Invalid request parameters"
+                )
                 raise ValidationError(error_message)
             else:
                 error_data = response.json() if response.content else {}
                 error_message = self._extract_error_message(
-                    error_data,
-                    f"API request failed with status {response.status_code}"
+                    error_data, f"API request failed with status {response.status_code}"
                 )
                 raise APIError(
                     error_message,
@@ -92,7 +93,9 @@ class TempMailClient:
         except requests.exceptions.RequestException as e:
             raise TempMailError(f"Request failed: {str(e)}")
 
-    def _extract_error_message(self, error_data: Dict[str, Any], default_message: str) -> str:
+    def _extract_error_message(
+        self, error_data: Dict[str, Any], default_message: str
+    ) -> str:
         """Extract error message from API response."""
         # Try new API format: {"error": {"detail": "message"}}
         if "error" in error_data and isinstance(error_data["error"], dict):
@@ -111,13 +114,17 @@ class TempMailClient:
     def _update_rate_limit_from_headers(self, headers: Any) -> None:
         """Update rate limit info from response headers."""
         self._last_rate_limit = RateLimit(
-            limit=int(headers["X-RateLimit-Limit"]),
-            remaining=int(headers.get("X-RateLimit-Remaining", 0)),
-            reset=int(headers.get("X-RateLimit-Reset", 0)),
+            limit=int(headers["X-Ratelimit-Limit"]),
+            remaining=int(headers["X-Ratelimit-Remaining"]),
+            reset=int(headers["X-Ratelimit-Reset"]),
+            used=int(headers["X-Ratelimit-Used"]),
         )
 
     def create_email(
-        self, email: Optional[str] = None, domain: Optional[str] = None, domain_type: Optional[str] = None,
+        self,
+        email: Optional[str] = None,
+        domain: Optional[str] = None,
+        domain_type: Optional[str] = None,
     ) -> EmailAddress:
         """
         Create a new temporary email address.
@@ -125,15 +132,17 @@ class TempMailClient:
         :param domain: Optional domain to use
         :param domain_type: Optional domain type (e.g., "public", "custom", "premium")
         """
-        params: Dict[str, Any] = {}
+        json_data: Dict[str, Any] = {}
         if email:
-            params["email"] = email
+            json_data["email"] = email
         if domain:
-            params["domain"] = domain
+            json_data["domain"] = domain
         if domain_type:
-            params["domain_type"] = domain_type
+            json_data["domain_type"] = domain_type
 
-        data = self._make_request("POST", "/v1/emails", params=params)
+        data = self._make_request(
+            "POST", "/v1/emails", json_data=json_data if json_data else None
+        )
 
         return EmailAddress.from_json(data)
 
@@ -149,41 +158,80 @@ class TempMailClient:
         return [Domain.from_json(domain) for domain in data["domains"]]
 
     def list_email_messages(
-        self, email: str,
+        self,
+        email: str,
     ) -> List[EmailMessage]:
+        """Get all messages for a specific email address."""
         data = self._make_request("GET", f"/v1/emails/{email}/messages")
 
         messages = []
         for msg_data in data.get("messages", []):
-            messages.append(
-                EmailMessage(
-                    id=msg_data["id"],
-                    from_addr=msg_data["from"],
-                    to_addr=msg_data["to"],
-                    subject=msg_data["subject"],
-                    body_text=msg_data["body_text"],
-                    body_html=msg_data.get("body_html"),
-                    created_at=msg_data.get("created_at"),
-                    attachments=msg_data.get("attachments"),
-                )
-            )
+            messages.append(EmailMessage.from_json(msg_data))
 
         return messages
 
+    def get_message(self, message_id: str) -> EmailMessage:
+        """Get a specific message by ID."""
+        data = self._make_request("GET", f"/v1/messages/{message_id}")
+        return EmailMessage.from_json(data)
+
     def delete_message(self, message_id: str) -> bool:
+        """Delete a specific message by ID."""
         self._make_request("DELETE", f"/v1/messages/{message_id}")
         return True
+
+    def delete_email(self, email: str) -> bool:
+        """Delete an email address and all its messages."""
+        self._make_request("DELETE", f"/v1/emails/{email}")
+        return True
+
+    def get_message_source_code(self, message_id: str) -> str:
+        """Get the raw source code of a message."""
+        data = self._make_request("GET", f"/v1/messages/{message_id}/source_code")
+        return data["data"]
+
+    def download_attachment(self, attachment_id: str) -> bytes:
+        """Download an attachment by ID."""
+        url = f"/v1/attachments/{attachment_id}"
+        response = self.session.request(
+            method="GET",
+            url=self.base_url + url,
+            timeout=self.timeout,
+        )
+
+        # Update rate limit info from headers
+        self._update_rate_limit_from_headers(response.headers)
+
+        if response.status_code >= 200 and response.status_code < 300:
+            return response.content
+        elif response.status_code == 401:
+            raise AuthenticationError("Invalid API key")
+        elif response.status_code == 429:
+            raise RateLimitError("Rate limit exceeded")
+        elif response.status_code == 400:
+            error_data = response.json() if response.content else {}
+            error_message = self._extract_error_message(
+                error_data, "Invalid request parameters"
+            )
+            raise ValidationError(error_message)
+        else:
+            error_data = response.json() if response.content else {}
+            error_message = self._extract_error_message(
+                error_data, f"API request failed with status {response.status_code}"
+            )
+            raise APIError(
+                error_message,
+                status_code=response.status_code,
+                response_data=error_data,
+            )
 
     def get_rate_limit(self) -> RateLimit:
         """
         Get current rate limit information.
-
-        Returns:
-            RateLimit: Current rate limit status, or None if not available
+        :return: RateLimit object
         """
-        # Make a lightweight request to get fresh rate limit info
-        self._make_request("GET", "/v1/rate-limit")
-        return self._last_rate_limit
+        data = self._make_request("GET", "/v1/rate_limit")
+        return RateLimit.from_json(data)
 
     @property
     def last_rate_limit(self) -> Optional[RateLimit]:

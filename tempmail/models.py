@@ -3,7 +3,6 @@
 import enum
 from dataclasses import dataclass
 from typing import Optional, List, Dict, Any
-from datetime import datetime
 
 
 @dataclass
@@ -13,6 +12,16 @@ class RateLimit:
     limit: int
     remaining: int
     reset: int
+    used: Optional[int] = None
+
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]) -> "RateLimit":
+        return cls(
+            limit=data["limit"],
+            remaining=data["remaining"],
+            reset=data["reset"],
+            used=data.get("used"),
+        )
 
 
 class DomainType(enum.Enum):
@@ -54,6 +63,21 @@ class EmailMessage:
     to_addr: str
     subject: str
     body_text: str
+    cc: Optional[List[str]] = None
     body_html: Optional[str] = None
-    created_at: Optional[datetime] = None
+    created_at: Optional[str] = None
     attachments: Optional[List[Dict[str, Any]]] = None
+
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]) -> "EmailMessage":
+        return cls(
+            id=data["id"],
+            from_addr=data["from"],
+            to_addr=data["to"],
+            subject=data["subject"],
+            body_text=data["body_text"],
+            cc=data.get("cc", []),
+            body_html=data.get("body_html"),
+            created_at=data.get("created_at"),
+            attachments=data.get("attachments", []),
+        )
