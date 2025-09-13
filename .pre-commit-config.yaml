@@ -19,6 +19,8 @@ repos:
     rev: 0.8.17
     hooks:
       - id: uv-sync
-        args: [ --dev ]
+        args:
+          - --extra dev
       - id: uv-lock
-        args: [ --dev ]
+        args:
+          - --extra dev
