@@ -8,6 +8,7 @@ from tempmail import (
     EmailAddress,
     Domain,
 )
+from tempmail.models import DomainType
 
 
 class TestTempMailClient:
@@ -93,9 +94,9 @@ class TestTempMailClient:
         client: TempMailClient = TempMailClient("test-api-key")
         domains: typing.List[Domain] = client.list_domains()
         assert domains == [
-            Domain(name="example.com", type="public"),
-            Domain(name="test.org", type="custom"),
-            Domain(name="example.io", type="premium"),
+            Domain(name="example.com", type=DomainType.PUBLIC),
+            Domain(name="test.org", type=DomainType.CUSTOM),
+            Domain(name="example.io", type=DomainType.PREMIUM),
         ]
 
     #

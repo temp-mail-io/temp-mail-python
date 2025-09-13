@@ -1,5 +1,6 @@
 """Data models for the Temp Mail API."""
 
+import enum
 from dataclasses import dataclass
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -14,32 +15,34 @@ class RateLimit:
     reset: int
 
 
+class DomainType(enum.Enum):
+    PUBLIC = "public"
+    CUSTOM = "custom"
+    PREMIUM = "premium"
+
+
 @dataclass
 class Domain:
     """Email domain information."""
+
     name: str
-    type: str # e.g., "public", "custom", "premium"
+    type: DomainType
 
     @classmethod
-    def from_json(cls, data: Dict[str, Any]) -> 'Domain':
-        return cls(
-            name=data['name'],
-            type=data['type']
-        )
+    def from_json(cls, data: Dict[str, Any]) -> "Domain":
+        return cls(name=data["name"], type=DomainType(data["type"]))
 
 
 @dataclass
 class EmailAddress:
     """Generated temporary email address."""
+
     email: str
-    ttl: int # Time to live in seconds
+    ttl: int  # Time to live in seconds
 
     @classmethod
-    def from_json(cls, data: Dict[str, Any]) -> 'EmailAddress':
-        return cls(
-            email=data['email'],
-            ttl=data['ttl']
-        )
+    def from_json(cls, data: Dict[str, Any]) -> "EmailAddress":
+        return cls(email=data["email"], ttl=data["ttl"])
 
 
 @dataclass
