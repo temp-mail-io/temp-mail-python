@@ -33,13 +33,9 @@ jobs:
       run: |
         uv sync --dev
 
-    - name: Lint with black
+    - name: Run pre-commit
       run: |
-        uvx ruff --check .
-
-    - name: Type check with mypy
-      run: |
-        uv run mypy tempmail
+        uv run pre-commit run --all-files
 
     - name: Test with pytest
       run: |
