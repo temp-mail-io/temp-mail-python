@@ -35,7 +35,7 @@ jobs:
 
     - name: Run pre-commit
       run: |
-        uvx run pre-commit run --all-files
+        uvx pre-commit run --all-files
 
     - name: Test with pytest
       run: |
