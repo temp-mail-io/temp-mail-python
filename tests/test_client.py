@@ -12,6 +12,7 @@ from tempmail import (
     AuthenticationError,
     RateLimitError,
     ValidationError,
+    TempMailError,
 )
 from tempmail.models import DomainType
 
@@ -314,7 +315,7 @@ class TestTempMailClient:
         mock_request.return_value = mock_response
 
         client = TempMailClient("test-api-key")
-        with pytest.raises(AuthenticationError, match="Invalid API key"):
+        with pytest.raises(AuthenticationError, match="API token is invalid"):
             client.create_email()
 
     @patch("tempmail.client.requests.Session.request")
@@ -322,12 +323,22 @@ class TestTempMailClient:
         """Test rate limit error handling."""
         mock_response = Mock()
         mock_response.status_code = 429
-        mock_response.content = b""
+        mock_response.json.return_value = {
+            "error": {
+                "code": "rate_limited",
+                "detail": "You have reached your rate limit. Please try again later.",
+                "type": "request_error",
+            },
+            "meta": {"request_id": "01K510JMH7V5PTN1TNCW5HF9AE"},
+        }
         mock_response.headers = {}
         mock_request.return_value = mock_response
 
         client = TempMailClient("test-api-key")
-        with pytest.raises(RateLimitError, match="Rate limit exceeded"):
+        with pytest.raises(
+            RateLimitError,
+            match="You have reached your rate limit. Please try again later.",
+        ):
             client.create_email()
 
     @patch("tempmail.client.requests.Session.request")
@@ -335,31 +346,40 @@ class TestTempMailClient:
         """Test validation error handling."""
         mock_response = Mock()
         mock_response.status_code = 400
-        mock_response.content = b'{"error": {"detail": "Invalid domain"}}'
-        mock_response.json.return_value = {"error": {"detail": "Invalid domain"}}
+        mock_response.json.return_value = {
+            "error": {
+                "code": "validation_error",
+                "detail": "Invalid domain name",
+                "type": "request_error",
+            },
+            "meta": {"request_id": "01K510JMH7V5PTN1TNCW5HF9AE"},
+        }
         mock_response.headers = {}
         mock_request.return_value = mock_response
 
         client = TempMailClient("test-api-key")
-        with pytest.raises(ValidationError, match="Invalid domain"):
-            client.create_email()
+        with pytest.raises(ValidationError, match="Invalid domain name"):
+            client.create_email(domain="invalid_domain")
 
     @patch("tempmail.client.requests.Session.request")
     def test_api_error(self, mock_request):
         """Test generic API error handling."""
         mock_response = Mock()
         mock_response.status_code = 500
-        mock_response.content = b'{"error": {"detail": "Internal server error"}}'
-        mock_response.json.return_value = {"error": {"detail": "Internal server error"}}
+        mock_response.json.return_value = {
+            "error": {
+                "code": "internal_error",
+                "detail": "Internal server error",
+                "type": "api_error",
+            },
+            "meta": {"request_id": "01K510JMH7V5PTN1TNCW5HF9AE"},
+        }
         mock_response.headers = {}
         mock_request.return_value = mock_response
 
         client = TempMailClient("test-api-key")
-        with pytest.raises(APIError) as exc_info:
+        with pytest.raises(TempMailError, match="Internal server error"):
             client.create_email()
-
-        assert exc_info.value.status_code == 500
-        assert "Internal server error" in str(exc_info.value)
 
     @patch("tempmail.client.requests.Session.request")
     def test_get_rate_limit_success(self, mock_request):

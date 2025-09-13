@@ -72,9 +72,8 @@ class TempMailClient:
                 timeout=self.timeout,
             )
 
-            self._update_rate_limit_from_headers(response.headers)
-
             if 200 <= response.status_code < 300:
+                self._update_rate_limit_from_headers(response.headers)
                 if return_content:
                     return response.content
                 return response.json()
@@ -92,24 +91,6 @@ class TempMailClient:
                     raise TempMailError(api_response.detail)
         except requests.exceptions.RequestException as e:
             raise TempMailError(f"Request failed: {str(e)}")
-
-    def _extract_error_message(
-        self, error_data: Dict[str, Any], default_message: str
-    ) -> str:
-        """Extract error message from API response."""
-        # Try new API format: {"error": {"detail": "message"}}
-        if "error" in error_data and isinstance(error_data["error"], dict):
-            error_obj = error_data["error"]
-            if "detail" in error_obj:
-                return str(error_obj["detail"])
-            if "message" in error_obj:
-                return str(error_obj["message"])
-
-        # Try old format: {"message": "error"}
-        if "message" in error_data:
-            return str(error_data["message"])
-
-        return default_message
 
     def _update_rate_limit_from_headers(self, headers: Any) -> None:
         """Update rate limit info from response headers."""
@@ -207,5 +188,8 @@ class TempMailClient:
 
     @property
     def last_rate_limit(self) -> Optional[RateLimit]:
-        """Get the last known rate limit information."""
+        """
+        Get the last known rate limit information.
+        It will be None if no requests have been made yet.
+        """
         return self._last_rate_limit
