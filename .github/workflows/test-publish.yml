@@ -1,0 +1,58 @@
+name: Test Publish to TestPyPI
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_suffix:
+        description: 'Version suffix for test release (e.g., .dev1, .rc1)'
+        required: false
+        default: '.dev1'
+        type: string
+
+jobs:
+  test-publish:
+    runs-on: ubuntu-latest
+    environment: test-pypi
+    
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install build dependencies
+        run: |
+          uv sync --extra dev
+
+      - name: Build package
+        run: |
+          uv build
+
+      - name: Check package
+        run: |
+          uvx twine check dist/*
+
+      - name: List built packages
+        run: |
+          ls -la dist/
+
+      - name: Publish to TestPyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
+          TWINE_REPOSITORY_URL: https://test.pypi.org/legacy/
+        run: |
+          uvx twine upload dist/* --verbose
+
+      - name: Test installation from TestPyPI
+        run: |
+          sleep 30  # Wait for package to be available
+          python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ temp-mail-io
+          python -c "import tempmail; print('✓ Package installed successfully from TestPyPI')"
+          python -c "from tempmail import TempMailClient; print('✓ TempMailClient imports successfully')"
