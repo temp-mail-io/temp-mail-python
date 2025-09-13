@@ -35,11 +35,7 @@ jobs:
 
     - name: Lint with black
       run: |
-        uv run black --check .
-
-    - name: Sort imports with isort
-      run: |
-        uv run isort --check-only .
+        uvx ruff --check .
 
     - name: Type check with mypy
       run: |
