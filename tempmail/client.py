@@ -1,5 +1,6 @@
 """Temp Mail API client implementation."""
 
+import typing
 from typing import Optional, List, Dict, Any
 from urllib.parse import urljoin
 import requests
@@ -10,13 +11,13 @@ from .models import (
     Domain,
     EmailAddress,
     EmailMessage,
+    APIErrorResponse,
 )
 from .exceptions import (
     TempMailError,
     AuthenticationError,
     RateLimitError,
     ValidationError,
-    APIError,
 )
 
 
@@ -50,8 +51,16 @@ class TempMailClient:
         endpoint: str,
         params: Optional[Dict[str, Any]] = None,
         json_data: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
-        """Make an HTTP request to the API."""
+        return_content: bool = False,
+    ) -> typing.Union[Dict[str, Any], bytes]:
+        """
+        Make an HTTP request to the API.
+        :param method: HTTP method (GET, POST, DELETE, etc.)
+        :param endpoint: API endpoint (e.g., "/v1/emails")
+        :param params: Query parameters
+        :param json_data: JSON body for POST/PUT requests
+        :param return_content: If True, return raw response content instead of JSON
+        """
         url = urljoin(self.base_url, endpoint)
 
         try:
@@ -63,33 +72,24 @@ class TempMailClient:
                 timeout=self.timeout,
             )
 
-            # Update rate limit info from headers
             self._update_rate_limit_from_headers(response.headers)
 
-            # Handle different status codes
-            if response.status_code >= 200 and response.status_code < 300:
+            if 200 <= response.status_code < 300:
+                if return_content:
+                    return response.content
                 return response.json()
-            elif response.status_code == 401:
-                raise AuthenticationError("Invalid API key")
-            elif response.status_code == 429:
-                raise RateLimitError("Rate limit exceeded")
-            elif response.status_code == 400:
-                error_data = response.json() if response.content else {}
-                error_message = self._extract_error_message(
-                    error_data, "Invalid request parameters"
-                )
-                raise ValidationError(error_message)
             else:
-                error_data = response.json() if response.content else {}
-                error_message = self._extract_error_message(
-                    error_data, f"API request failed with status {response.status_code}"
+                api_response: APIErrorResponse = APIErrorResponse.from_json(
+                    response.json()
                 )
-                raise APIError(
-                    error_message,
-                    status_code=response.status_code,
-                    response_data=error_data,
-                )
-
+                if api_response.is_api_key_error():
+                    raise AuthenticationError(api_response.detail)
+                elif api_response.is_rate_limit_error():
+                    raise RateLimitError(api_response.detail)
+                elif api_response.is_validation_error():
+                    raise ValidationError(api_response.detail)
+                else:
+                    raise TempMailError(api_response.detail)
         except requests.exceptions.RequestException as e:
             raise TempMailError(f"Request failed: {str(e)}")
 
@@ -192,38 +192,10 @@ class TempMailClient:
 
     def download_attachment(self, attachment_id: str) -> bytes:
         """Download an attachment by ID."""
-        url = f"/v1/attachments/{attachment_id}"
-        response = self.session.request(
-            method="GET",
-            url=self.base_url + url,
-            timeout=self.timeout,
+        content: bytes = self._make_request(
+            "GET", f"/v1/attachments/{attachment_id}", return_content=True
         )
-
-        # Update rate limit info from headers
-        self._update_rate_limit_from_headers(response.headers)
-
-        if response.status_code >= 200 and response.status_code < 300:
-            return response.content
-        elif response.status_code == 401:
-            raise AuthenticationError("Invalid API key")
-        elif response.status_code == 429:
-            raise RateLimitError("Rate limit exceeded")
-        elif response.status_code == 400:
-            error_data = response.json() if response.content else {}
-            error_message = self._extract_error_message(
-                error_data, "Invalid request parameters"
-            )
-            raise ValidationError(error_message)
-        else:
-            error_data = response.json() if response.content else {}
-            error_message = self._extract_error_message(
-                error_data, f"API request failed with status {response.status_code}"
-            )
-            raise APIError(
-                error_message,
-                status_code=response.status_code,
-                response_data=error_data,
-            )
+        return content
 
     def get_rate_limit(self) -> RateLimit:
         """

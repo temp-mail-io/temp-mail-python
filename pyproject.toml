@@ -33,6 +33,7 @@ dev = [
     "isort>=5.0.0",
     "mypy>=0.800",
     "types-requests",
+    "setuptools",
 ]
 
 [project.urls]

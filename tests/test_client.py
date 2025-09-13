@@ -12,7 +12,6 @@ from tempmail import (
     AuthenticationError,
     RateLimitError,
     ValidationError,
-    APIError,
 )
 from tempmail.models import DomainType
 
@@ -293,6 +292,8 @@ class TestTempMailClient:
         mock_request.assert_called_once_with(
             method="GET",
             url="https://api.temp-mail.io/v1/attachments/attachment1",
+            params=None,
+            json=None,
             timeout=30,
         )
 
@@ -300,8 +301,15 @@ class TestTempMailClient:
     def test_authentication_error(self, mock_request):
         """Test authentication error handling."""
         mock_response = Mock()
-        mock_response.status_code = 401
-        mock_response.content = b""
+        mock_response.status_code = 400
+        mock_response.json.return_value = {
+            "error": {
+                "code": "api_key_invalid",
+                "detail": "API token is invalid",
+                "type": "request_error",
+            },
+            "meta": {"request_id": "01K510JMH7V5PTN1TNCW5HF9AE"},
+        }
         mock_response.headers = {}
         mock_request.return_value = mock_response
 
@@ -365,9 +373,10 @@ class TestTempMailClient:
             "reset": 1640995200,
         }
         mock_response.headers = {
-            "X-RateLimit-Limit": "100",
-            "X-RateLimit-Remaining": "95",
-            "X-RateLimit-Reset": "1640995200",
+            "X-Ratelimit-Limit": "100",
+            "X-Ratelimit-Remaining": "95",
+            "X-Ratelimit-Reset": "1640995200",
+            "X-Ratelimit-Used": "5",
         }
         mock_request.return_value = mock_response
 

@@ -81,3 +81,38 @@ class EmailMessage:
             created_at=data.get("created_at"),
             attachments=data.get("attachments", []),
         )
+
+
+@dataclass
+class APIErrorResponse:
+    code: str
+    detail: str
+    type: str
+    request_id: str
+
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]) -> "APIErrorResponse":
+        return cls(
+            code=data["error"]["code"],
+            detail=data["error"]["detail"],
+            type=data["error"]["type"],
+            request_id=data["meta"]["request_id"],
+        )
+
+    def is_api_key_error(self) -> bool:
+        """
+        Returns True if the error is related to an invalid or missing API key.
+        """
+        return self.code in {"api_key_invalid", "api_key_empty"}
+
+    def is_rate_limit_error(self) -> bool:
+        """
+        Returns True if the error is related to exceeding the API rate limit.
+        """
+        return self.code == "rate_limited"
+
+    def is_validation_error(self) -> bool:
+        """
+        Returns True if the error is related to invalid request parameters.
+        """
+        return self.code == "validation_error"

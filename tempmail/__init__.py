@@ -14,7 +14,6 @@ from .exceptions import (
     AuthenticationError,
     RateLimitError,
     ValidationError,
-    APIError,
 )
 
 __all__ = [
@@ -27,5 +26,4 @@ __all__ = [
     "AuthenticationError",
     "RateLimitError",
     "ValidationError",
-    "APIError",
 ]
