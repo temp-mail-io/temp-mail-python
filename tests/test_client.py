@@ -14,7 +14,7 @@ from tempmail import (
     ValidationError,
     TempMailError,
 )
-from tempmail.models import DomainType
+from tempmail.models import DomainType, RateLimit
 
 
 class TestTempMailClient:
@@ -403,16 +403,15 @@ class TestTempMailClient:
         client = TempMailClient("test-api-key")
         rate_limit_data = client.get_rate_limit()
 
-        assert rate_limit_data.limit == 100
-        assert rate_limit_data.remaining == 95
-        assert rate_limit_data.used == 5
-        assert rate_limit_data.reset == 1640995200
+        assert rate_limit_data == RateLimit(
+            limit=100, remaining=95, used=5, reset=1640995200
+        )
 
         # Verify the last rate limit was updated from headers
         assert client.last_rate_limit is not None
-        assert client.last_rate_limit.limit == 100
-        assert client.last_rate_limit.remaining == 95
-        assert client.last_rate_limit.reset == 1640995200
+        assert client.last_rate_limit == RateLimit(
+            limit=100, remaining=95, used=5, reset=1640995200
+        )
 
     @patch("tempmail.client.requests.Session.request")
     def test_request_exception(self, mock_request):

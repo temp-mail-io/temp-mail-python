@@ -33,7 +33,11 @@ for message in messages:
 - **Create temporary email addresses** - Generate disposable emails instantly
 - **List available domains** - Get domains you can use for email creation
 - **Receive emails** - Fetch messages sent to your temporary addresses
-- **Delete messages** - Clean up messages when done
+- **Get individual messages** - Retrieve specific messages by ID
+- **Get message source code** - Access raw email source
+- **Download attachments** - Download email attachments
+- **Delete messages** - Clean up individual messages
+- **Delete emails** - Remove email addresses and all their messages
 - **Rate limit monitoring** - Track your API usage
 - **Error handling** - Comprehensive exception handling
 - **Type hints** - Full typing support for better development experience
@@ -61,14 +65,17 @@ client = TempMailClient(
 ### Creating Email Addresses
 
 ```python
-from tempmail import CreateEmailOptions
-
 # Create random email
 email = client.create_email()
 
-# Create with specific domain and prefix
-options = CreateEmailOptions(domain="example.com", prefix="mytest")
-email = client.create_email(options)
+# Create with specific domain
+email = client.create_email(domain="example.com")
+
+# Create with specific email address
+email = client.create_email(email="mytest@example.com")
+
+# Create with domain type preference
+email = client.create_email(domain_type="premium")
 ```
 
 ### Listing Domains
@@ -76,23 +83,34 @@ email = client.create_email(options)
 ```python
 domains = client.list_domains()
 for domain in domains:
-    print(domain.domain)
+    print(f"Domain: {domain.name}, Type: {domain.type.value}")
 ```
 
 ### Managing Messages
 
 ```python
-from tempmail import ListMessagesOptions
-
 # List all messages for an email
 messages = client.list_email_messages("test@example.com")
+for message in messages:
+    print(f"From: {message.from_addr}")
+    print(f"Subject: {message.subject}")
+    print(f"CC: {message.cc}")
+    print(f"Attachments: {len(message.attachments or [])}")
 
-# List with pagination
-options = ListMessagesOptions(limit=10, offset=0)
-messages = client.list_email_messages("test@example.com", options)
+# Get a specific message
+message = client.get_message("message-id")
+
+# Get message source code
+source_code = client.get_message_source_code("message-id")
+
+# Download an attachment
+attachment_data = client.download_attachment("attachment-id")
 
 # Delete a message
 client.delete_message("message-id")
+
+# Delete an entire email address and all its messages
+client.delete_email("test@example.com")
 ```
 
 ### Rate Limiting
@@ -100,9 +118,15 @@ client.delete_message("message-id")
 ```python
 # Get current rate limit status
 rate_limit = client.get_rate_limit()
-if rate_limit:
-    print(f"Remaining requests: {rate_limit.remaining}")
-    print(f"Reset time: {rate_limit.reset}")
+print(f"Limit: {rate_limit.limit}")
+print(f"Remaining: {rate_limit.remaining}")
+print(f"Used: {rate_limit.used}")
+print(f"Reset time: {rate_limit.reset}")
+
+# Access last rate limit from any request
+last_rate_limit = client.last_rate_limit
+if last_rate_limit:
+    print(f"Last known remaining: {last_rate_limit.remaining}")
 ```
 
 ## Error Handling
@@ -115,7 +139,6 @@ from tempmail import (
     AuthenticationError,     # Invalid API key
     RateLimitError,         # Rate limit exceeded
     ValidationError,        # Invalid parameters
-    APIError               # Server errors
 )
 
 try:
@@ -127,8 +150,8 @@ except RateLimitError:
     print("Rate limit exceeded")
 except ValidationError as e:
     print(f"Invalid parameters: {e}")
-except APIError as e:
-    print(f"API error: {e.status_code} - {e}")
+except TempMailError as e:
+    print(f"API error: {e}")
 ```
 
 ## Development
@@ -140,36 +163,68 @@ except APIError as e:
 git clone https://github.com/temp-mail-io/temp-mail-python
 cd temp-mail-python
 
-# Install in development mode
-pip install -e ".[dev]"
+# Install uv (recommended)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies
+uv sync --dev
 ```
 
 ### Running Tests
 
 ```bash
-pytest tests/
+uv run pytest tests/
 ```
 
-### Code Formatting
+### Code Quality
 
 ```bash
-black tempmail/ tests/
-isort tempmail/ tests/
+# Run all pre-commit hooks
+uv run pre-commit run --all-files
+
+# Or run individual tools
+uv run ruff check          # Linting
+uv run ruff format         # Formatting
+uv run mypy tempmail/      # Type checking
 ```
 
-### Type Checking
+## Complete Example
 
-```bash
-mypy tempmail/
+```python
+from tempmail import TempMailClient, AuthenticationError, RateLimitError
+
+# Initialize client
+client = TempMailClient("your-api-key")
+
+try:
+    # Create a temporary email
+    email = client.create_email()
+    print(f"Created email: {email.email}")
+    print(f"TTL: {email.ttl} seconds")
+    
+    # List available domains
+    domains = client.list_domains()
+    print(f"Available domains: {len(domains)}")
+    
+    # Check for messages (would be empty initially)
+    messages = client.list_email_messages(email.email)
+    print(f"Messages: {len(messages)}")
+    
+    # Check rate limit
+    rate_limit = client.get_rate_limit()
+    print(f"Requests remaining: {rate_limit.remaining}/{rate_limit.limit}")
+    
+except AuthenticationError:
+    print("Invalid API key")
+except RateLimitError:
+    print("Rate limit exceeded")
+except Exception as e:
+    print(f"Error: {e}")
 ```
-
-## Examples
-
-See the [examples/](examples/) directory for more detailed usage examples.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License—see [LICENSE](LICENSE) file for details.
 
 ## Links
 

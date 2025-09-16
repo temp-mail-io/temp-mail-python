@@ -52,6 +52,7 @@ class TempMailClient:
         params: Optional[Dict[str, Any]] = None,
         json_data: Optional[Dict[str, Any]] = None,
         return_content: bool = False,
+        update_rate_limit: bool = True,
     ) -> typing.Union[Dict[str, Any], bytes]:
         """
         Make an HTTP request to the API.
@@ -73,7 +74,8 @@ class TempMailClient:
             )
 
             if 200 <= response.status_code < 300:
-                self._update_rate_limit_from_headers(response.headers)
+                if update_rate_limit:
+                    self._update_rate_limit_from_headers(response.headers)
                 if return_content:
                     return response.content
                 return response.json()
@@ -183,8 +185,11 @@ class TempMailClient:
         Get current rate limit information.
         :return: RateLimit object
         """
-        data = self._make_request("GET", "/v1/rate_limit")
-        return RateLimit.from_json(data)
+        data = self._make_request("GET", "/v1/rate_limit", update_rate_limit=False)
+        rate_limit: RateLimit = RateLimit.from_json(data)
+        # Also update the last known rate limit since this method doesn't use headers
+        self._last_rate_limit = rate_limit
+        return rate_limit
 
     @property
     def last_rate_limit(self) -> Optional[RateLimit]:
