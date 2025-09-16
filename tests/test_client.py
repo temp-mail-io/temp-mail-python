@@ -1,5 +1,3 @@
-"""Tests for the TempMailClient."""
-
 import datetime
 import typing
 import pytest
@@ -145,7 +143,6 @@ class TestTempMailClient:
 
     @patch("tempmail.client.requests.Session.request")
     def test_list_email_messages_empty(self, mock_request):
-        """Test message listing with empty response."""
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"messages": []}
@@ -156,7 +153,6 @@ class TestTempMailClient:
         messages = client.list_email_messages("test@temp.io")
 
         assert len(messages) == 0
-        # Verify the request was made to correct endpoint
         mock_request.assert_called_once_with(
             method="GET",
             url="https://api.temp-mail.io/v1/emails/test@temp.io/messages",
@@ -167,7 +163,6 @@ class TestTempMailClient:
 
     @patch("tempmail.client.requests.Session.request")
     def test_get_message_success(self, mock_request):
-        """Test successful single message retrieval."""
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -187,13 +182,19 @@ class TestTempMailClient:
         client = TempMailClient("test-api-key")
         message = client.get_message("msg1")
 
-        assert isinstance(message, EmailMessage)
-        assert message.id == "msg1"
-        assert message.from_addr == "sender@example.com"
-        assert message.to_addr == "test@temp.io"
-        assert message.subject == "Test Subject"
-
-        # Verify correct endpoint was called
+        assert message == EmailMessage(
+            id="msg1",
+            from_addr="sender@example.com",
+            to_addr="test@temp.io",
+            cc=[],
+            subject="Test Subject",
+            body_text="Test body",
+            body_html="<p>Test body</p>",
+            created_at=datetime.datetime(
+                2023, 1, 1, 0, 0, tzinfo=datetime.timezone.utc
+            ),
+            attachments=[],
+        )
         mock_request.assert_called_once_with(
             method="GET",
             url="https://api.temp-mail.io/v1/messages/msg1",
@@ -204,7 +205,6 @@ class TestTempMailClient:
 
     @patch("tempmail.client.requests.Session.request")
     def test_delete_message_success(self, mock_request):
-        """Test successful message deletion."""
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {}
@@ -212,11 +212,8 @@ class TestTempMailClient:
         mock_request.return_value = mock_response
 
         client = TempMailClient("test-api-key")
-        result = client.delete_message("msg123")
+        client.delete_message("msg123")
 
-        assert result is True
-
-        # Verify correct endpoint was called
         mock_request.assert_called_once_with(
             method="DELETE",
             url="https://api.temp-mail.io/v1/messages/msg123",
@@ -227,7 +224,6 @@ class TestTempMailClient:
 
     @patch("tempmail.client.requests.Session.request")
     def test_delete_email_success(self, mock_request):
-        """Test successful email deletion."""
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {}
@@ -235,11 +231,8 @@ class TestTempMailClient:
         mock_request.return_value = mock_response
 
         client = TempMailClient("test-api-key")
-        result = client.delete_email("test@temp.io")
+        client.delete_email("test@temp.io")
 
-        assert result is True
-
-        # Verify correct endpoint was called
         mock_request.assert_called_once_with(
             method="DELETE",
             url="https://api.temp-mail.io/v1/emails/test@temp.io",
@@ -250,7 +243,6 @@ class TestTempMailClient:
 
     @patch("tempmail.client.requests.Session.request")
     def test_get_message_source_code_success(self, mock_request):
-        """Test successful message source code retrieval."""
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -265,7 +257,6 @@ class TestTempMailClient:
         assert "Received: from example.com" in source_code
         assert "Subject: Test Subject" in source_code
 
-        # Verify correct endpoint was called
         mock_request.assert_called_once_with(
             method="GET",
             url="https://api.temp-mail.io/v1/messages/msg1/source_code",
@@ -276,7 +267,6 @@ class TestTempMailClient:
 
     @patch("tempmail.client.requests.Session.request")
     def test_download_attachment_success(self, mock_request):
-        """Test successful attachment download."""
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.content = b"attachment content here"
@@ -288,7 +278,6 @@ class TestTempMailClient:
 
         assert content == b"attachment content here"
 
-        # Verify correct endpoint was called
         mock_request.assert_called_once_with(
             method="GET",
             url="https://api.temp-mail.io/v1/attachments/attachment1",
@@ -299,7 +288,6 @@ class TestTempMailClient:
 
     @patch("tempmail.client.requests.Session.request")
     def test_authentication_error(self, mock_request):
-        """Test authentication error handling."""
         mock_response = Mock()
         mock_response.status_code = 400
         mock_response.json.return_value = {
@@ -319,7 +307,6 @@ class TestTempMailClient:
 
     @patch("tempmail.client.requests.Session.request")
     def test_rate_limit_error(self, mock_request):
-        """Test rate limit error handling."""
         mock_response = Mock()
         mock_response.status_code = 429
         mock_response.json.return_value = {
@@ -342,7 +329,6 @@ class TestTempMailClient:
 
     @patch("tempmail.client.requests.Session.request")
     def test_validation_error(self, mock_request):
-        """Test validation error handling."""
         mock_response = Mock()
         mock_response.status_code = 400
         mock_response.json.return_value = {
@@ -362,7 +348,6 @@ class TestTempMailClient:
 
     @patch("tempmail.client.requests.Session.request")
     def test_api_error(self, mock_request):
-        """Test generic API error handling."""
         mock_response = Mock()
         mock_response.status_code = 500
         mock_response.json.return_value = {
@@ -382,7 +367,6 @@ class TestTempMailClient:
 
     @patch("tempmail.client.requests.Session.request")
     def test_get_rate_limit_success(self, mock_request):
-        """Test successful rate limit retrieval."""
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -414,8 +398,6 @@ class TestTempMailClient:
 
     @patch("tempmail.client.requests.Session.request")
     def test_request_exception(self, mock_request):
-        """Test handling of request exceptions."""
-
         mock_request.side_effect = ConnectionError("Connection failed")
 
         client = TempMailClient("test-api-key")

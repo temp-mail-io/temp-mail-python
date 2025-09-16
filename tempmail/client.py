@@ -158,15 +158,13 @@ class TempMailClient:
         data = self._make_request("GET", f"/v1/messages/{message_id}")
         return EmailMessage.from_json(data)
 
-    def delete_message(self, message_id: str) -> bool:
+    def delete_message(self, message_id: str) -> None:
         """Delete a specific message by ID."""
         self._make_request("DELETE", f"/v1/messages/{message_id}")
-        return True
 
-    def delete_email(self, email: str) -> bool:
+    def delete_email(self, email: str) -> None:
         """Delete an email address and all its messages."""
         self._make_request("DELETE", f"/v1/emails/{email}")
-        return True
 
     def get_message_source_code(self, message_id: str) -> str:
         """Get the raw source code of a message."""
