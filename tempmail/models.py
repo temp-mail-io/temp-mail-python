@@ -2,6 +2,7 @@
 
 import enum
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional, List, Dict, Any
 
 
@@ -12,7 +13,7 @@ class RateLimit:
     limit: int
     remaining: int
     reset: int
-    used: Optional[int] = None
+    used: int
 
     @classmethod
     def from_json(cls, data: Dict[str, Any]) -> "RateLimit":
@@ -20,7 +21,7 @@ class RateLimit:
             limit=data["limit"],
             remaining=data["remaining"],
             reset=data["reset"],
-            used=data.get("used"),
+            used=data["used"],
         )
 
 
@@ -55,6 +56,15 @@ class EmailAddress:
 
 
 @dataclass
+class Attachment:
+    """Attachment information for an email message."""
+
+    filename: str
+    content_type: str
+    size: int  # Size in bytes
+
+
+@dataclass
 class EmailMessage:
     """Email message received at temporary address."""
 
@@ -63,9 +73,9 @@ class EmailMessage:
     to_addr: str
     subject: str
     body_text: str
+    created_at: datetime
     cc: Optional[List[str]] = None
     body_html: Optional[str] = None
-    created_at: Optional[str] = None
     attachments: Optional[List[Dict[str, Any]]] = None
 
     @classmethod
@@ -76,9 +86,11 @@ class EmailMessage:
             to_addr=data["to"],
             subject=data["subject"],
             body_text=data["body_text"],
+            created_at=datetime.fromisoformat(
+                data["created_at"].replace("Z", "+00:00")
+            ),
             cc=data.get("cc", []),
             body_html=data.get("body_html"),
-            created_at=data.get("created_at"),
             attachments=data.get("attachments", []),
         )
 

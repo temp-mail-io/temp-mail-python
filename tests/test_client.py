@@ -1,5 +1,6 @@
 """Tests for the TempMailClient."""
 
+import datetime
 import typing
 import pytest
 
@@ -14,6 +15,7 @@ from tempmail import (
     ValidationError,
     TempMailError,
 )
+from requests.exceptions import ConnectionError
 from tempmail.models import DomainType, RateLimit
 
 
@@ -26,13 +28,11 @@ class TestTempMailClient:
     }
 
     def test_client_initialization(self) -> None:
-        """Test client initialization with API key."""
         client = TempMailClient("test-api-key")
         assert client.api_key == "test-api-key"
         assert client.session.headers["X-API-Key"] == "test-api-key"
 
     def test_client_initialization_with_custom_params(self) -> None:
-        """Test client initialization with custom parameters."""
         client = TempMailClient(
             "test-api-key", base_url="https://custom.api.com", timeout=60
         )
@@ -41,7 +41,6 @@ class TestTempMailClient:
 
     @patch("tempmail.client.requests.Session.request")
     def test_create_email_success(self, mock_request) -> None:
-        """Test successful email creation."""
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"email": "test@example.com", "ttl": 86400}
@@ -54,7 +53,6 @@ class TestTempMailClient:
 
     @patch("tempmail.client.requests.Session.request")
     def test_create_email_with_options(self, mock_request):
-        """Test email creation with options."""
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"email": "custom@mydomain.com", "ttl": 86400}
@@ -107,7 +105,6 @@ class TestTempMailClient:
 
     @patch("tempmail.client.requests.Session.request")
     def test_list_email_messages_success(self, mock_request):
-        """Test successful message listing."""
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -129,20 +126,22 @@ class TestTempMailClient:
         mock_request.return_value = mock_response
 
         client = TempMailClient("test-api-key")
-        messages = client.list_email_messages("test@temp.io")
+        messages: typing.List[EmailMessage] = client.list_email_messages("test@temp.io")
 
         assert len(messages) == 1
-        message = messages[0]
-        assert isinstance(message, EmailMessage)
-        assert message.id == "msg1"
-        assert message.from_addr == "sender@example.com"
-        assert message.to_addr == "test@temp.io"
-        assert message.cc == ["cc@example.com"]
-        assert message.subject == "Test Subject"
-        assert message.body_text == "Test body"
-        assert message.body_html == "<p>Test body</p>"
-        assert message.created_at == "2023-01-01T00:00:00Z"
-        assert message.attachments == []
+        assert messages[0] == EmailMessage(
+            id="msg1",
+            from_addr="sender@example.com",
+            to_addr="test@temp.io",
+            cc=["cc@example.com"],
+            subject="Test Subject",
+            body_text="Test body",
+            body_html="<p>Test body</p>",
+            created_at=datetime.datetime(
+                2023, 1, 1, 0, 0, tzinfo=datetime.timezone.utc
+            ),
+            attachments=[],
+        )
 
     @patch("tempmail.client.requests.Session.request")
     def test_list_email_messages_empty(self, mock_request):
@@ -416,8 +415,6 @@ class TestTempMailClient:
     @patch("tempmail.client.requests.Session.request")
     def test_request_exception(self, mock_request):
         """Test handling of request exceptions."""
-        from requests.exceptions import ConnectionError
-        from tempmail.exceptions import TempMailError
 
         mock_request.side_effect = ConnectionError("Connection failed")
 

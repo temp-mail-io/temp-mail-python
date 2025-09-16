@@ -1,6 +1,8 @@
-"""Official Temp Mail API (https://temp-mail.io) Wrapper for Python."""
+"""
+Official Temp Mail API (https://temp-mail.io) Wrapper for Python.
+"""
 
-__version__ = "1.0.0"
+__version__ = "0.1.0"
 
 from .client import TempMailClient
 from .models import (
