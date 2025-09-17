@@ -3,7 +3,7 @@
 import enum
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Any
 
 
 @dataclass
@@ -59,9 +59,17 @@ class EmailAddress:
 class Attachment:
     """Attachment information for an email message."""
 
-    filename: str
-    content_type: str
+    id: str
+    name: str
     size: int  # Size in bytes
+
+    @classmethod
+    def from_json(cls, data: Dict[str, Any]) -> "Attachment":
+        return cls(
+            id=data["id"],
+            name=data["name"],
+            size=data["size"],
+        )
 
 
 @dataclass
@@ -74,9 +82,9 @@ class EmailMessage:
     subject: str
     body_text: str
     created_at: datetime
-    cc: Optional[List[str]] = None
-    body_html: Optional[str] = None
-    attachments: Optional[List[Dict[str, Any]]] = None
+    cc: List[str]
+    body_html: str
+    attachments: List[Attachment]
 
     @classmethod
     def from_json(cls, data: Dict[str, Any]) -> "EmailMessage":
@@ -89,9 +97,9 @@ class EmailMessage:
             created_at=datetime.fromisoformat(
                 data["created_at"].replace("Z", "+00:00")
             ),
-            cc=data.get("cc", []),
-            body_html=data.get("body_html"),
-            attachments=data.get("attachments", []),
+            cc=data["cc"],
+            body_html=data["body_html"],
+            attachments=[Attachment.from_json(v) for v in data["attachments"]],
         )
 
 

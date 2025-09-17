@@ -14,7 +14,7 @@ from tempmail import (
     TempMailError,
 )
 from requests.exceptions import ConnectionError
-from tempmail.models import DomainType, RateLimit
+from tempmail.models import DomainType, RateLimit, Attachment
 
 
 class TestTempMailClient:
@@ -116,7 +116,18 @@ class TestTempMailClient:
                     "body_text": "Test body",
                     "body_html": "<p>Test body</p>",
                     "created_at": "2023-01-01T00:00:00Z",
-                    "attachments": [],
+                    "attachments": [
+                        {
+                            "id": "att1",
+                            "name": "file.txt",
+                            "size": 1234,
+                        },
+                        {
+                            "id": "att2",
+                            "name": "image.png",
+                            "size": 4567,
+                        },
+                    ],
                 }
             ]
         }
@@ -138,7 +149,10 @@ class TestTempMailClient:
             created_at=datetime.datetime(
                 2023, 1, 1, 0, 0, tzinfo=datetime.timezone.utc
             ),
-            attachments=[],
+            attachments=[
+                Attachment(id="att1", name="file.txt", size=1234),
+                Attachment(id="att2", name="image.png", size=4567),
+            ],
         )
 
     @patch("tempmail.client.requests.Session.request")

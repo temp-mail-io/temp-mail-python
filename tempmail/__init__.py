@@ -10,6 +10,7 @@ from .models import (
     Domain,
     EmailAddress,
     EmailMessage,
+    Attachment,
 )
 from .exceptions import (
     TempMailError,
@@ -23,6 +24,7 @@ __all__ = [
     "RateLimit",
     "Domain",
     "EmailAddress",
+    "Attachment",
     "EmailMessage",
     "TempMailError",
     "AuthenticationError",

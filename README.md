@@ -201,19 +201,19 @@ try:
     email = client.create_email()
     print(f"Created email: {email.email}")
     print(f"TTL: {email.ttl} seconds")
-    
+
     # List available domains
     domains = client.list_domains()
     print(f"Available domains: {len(domains)}")
-    
+
     # Check for messages (would be empty initially)
     messages = client.list_email_messages(email.email)
     print(f"Messages: {len(messages)}")
-    
+
     # Check rate limit
     rate_limit = client.get_rate_limit()
     print(f"Requests remaining: {rate_limit.remaining}/{rate_limit.limit}")
-    
+
 except AuthenticationError:
     print("Invalid API key")
 except RateLimitError:

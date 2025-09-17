@@ -148,7 +148,7 @@ class TempMailClient:
         data = self._make_request("GET", f"/v1/emails/{email}/messages")
 
         messages = []
-        for msg_data in data.get("messages", []):
+        for msg_data in data["messages"]:
             messages.append(EmailMessage.from_json(msg_data))
 
         return messages
