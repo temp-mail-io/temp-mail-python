@@ -1,0 +1,49 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "temp-mail-io"
+dynamic = ["version", "description"]
+author = [{name = "Mikhail Mitiaev", email = ""}]
+readme = "README.md"
+keywords = ["temp-mail", "temp-mail-api", "temp-mail-io"]
+requires-python = ">=3.8"
+dependencies = [
+    "requests>=2.25.0",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0.0",
+    "pytest-cov>=2.10.0",
+    "black>=21.0.0",
+    "isort>=5.0.0",
+    "mypy>=0.800",
+    "types-requests",
+    "setuptools",
+]
+
+[project.urls]
+Source = "https://github.com/temp-mail-io/temp-mail-python"
+
+[project.license]
+file = "LICENSE"
+
+[tool.flit.module]
+name = "tempmail"
+
+[tool.setuptools.package-data]
+tempmail = ["tempmail/py.typed"]
