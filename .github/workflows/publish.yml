@@ -3,8 +3,7 @@ name: Publish to PyPI
 on:
   push:
     tags:
-      # Semver versioning pattern
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - *
 
 jobs:
   build-and-publish:
