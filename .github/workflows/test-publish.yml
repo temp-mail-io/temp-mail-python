@@ -53,6 +53,6 @@ jobs:
       - name: Test installation from TestPyPI
         run: |
           sleep 30  # Wait for package to be available
-          python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ temp-mail-io
+          python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ temp-mail
           python -c "import tempmail; print('✓ Package installed successfully from TestPyPI')"
           python -c "from tempmail import TempMailClient; print('✓ TempMailClient imports successfully')"

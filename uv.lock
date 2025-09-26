@@ -806,7 +806,7 @@ wheels = [
 ]
 
 [[package]]
-name = "temp-mail-io"
+name = "temp-mail"
 source = { editable = "." }
 dependencies = [
     { name = "requests", version = "2.32.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },

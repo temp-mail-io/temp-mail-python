@@ -1,18 +1,18 @@
 # Temp Mail Python Library
 
-[![PyPI version](https://badge.fury.io/py/temp-mail-io.svg)](https://badge.fury.io/py/temp-mail-io)
-[![Python Support](https://img.shields.io/pypi/pyversions/temp-mail-io.svg)](https://pypi.org/project/temp-mail-io/)
+[![PyPI version](https://badge.fury.io/py/temp-mail-io.svg)](https://badge.fury.io/py/temp-mail)
+[![Python Support](https://img.shields.io/pypi/pyversions/temp-mail.svg)](https://pypi.org/project/temp-mail/)
 [![Test Status](https://github.com/temp-mail-io/temp-mail-python/workflows/Test/badge.svg)](https://github.com/temp-mail-io/temp-mail-python/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/temp-mail-io/temp-mail-python/branch/main/graph/badge.svg)](https://codecov.io/gh/temp-mail-io/temp-mail-python)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Downloads](https://pepy.tech/badge/temp-mail-io)](https://pepy.tech/project/temp-mail-io)
+[![Downloads](https://pepy.tech/badge/temp-mail)](https://pepy.tech/project/temp-mail)
 
 Official Python library for the [Temp Mail API](https://temp-mail.io). Create temporary email addresses and receive emails programmatically.
 
 ## Installation
 
 ```bash
-pip install temp-mail-io
+pip install temp-mail
 ```
 
 ## Quick Start
