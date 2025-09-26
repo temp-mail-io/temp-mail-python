@@ -30,6 +30,12 @@ jobs:
         run: |
           uv sync --extra dev
 
+      - name: Modify package name for test release
+        run: |
+          # Create a temporary pyproject.toml with modified name
+          sed 's/name = "temp-mail"/name = "temp-mail-io"/' pyproject.toml > pyproject.toml.tmp
+          mv pyproject.toml.tmp pyproject.toml
+
       - name: Build package
         run: |
           uv build
@@ -53,6 +59,6 @@ jobs:
       - name: Test installation from TestPyPI
         run: |
           sleep 30  # Wait for package to be available
-          python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ temp-mail
+          python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ temp-mail-io
           python -c "import tempmail; print('✓ Package installed successfully from TestPyPI')"
           python -c "from tempmail import TempMailClient; print('✓ TempMailClient imports successfully')"
