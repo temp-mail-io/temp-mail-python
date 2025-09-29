@@ -163,7 +163,7 @@ class TestTempMailClient:
             "messages": [
                 {
                     "id": "msg1",
-                    "from": "sender@example.com",
+                    "from": "<sender@example.com>",
                     "to": "test@temp.io",
                     "cc": ["cc@example.com"],
                     "subject": "Test Subject",
@@ -183,7 +183,7 @@ class TestTempMailClient:
         assert len(messages) == 1
         assert messages[0] == EmailMessage(
             id="msg1",
-            from_addr="sender@example.com",
+            from_addr="<sender@example.com>",
             to_addr="test@temp.io",
             cc=["cc@example.com"],
             subject="Test Subject",
