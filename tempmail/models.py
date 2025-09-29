@@ -1,6 +1,7 @@
 """Data models for the Temp Mail API."""
 
 import enum
+import typing
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Dict, Any
@@ -88,6 +89,7 @@ class EmailMessage:
 
     @classmethod
     def from_json(cls, data: Dict[str, Any]) -> "EmailMessage":
+        attachments: typing.List[Dict[str, Any]] = data["attachments"] or []
         return cls(
             id=data["id"],
             from_addr=data["from"],
@@ -99,7 +101,7 @@ class EmailMessage:
             ),
             cc=data["cc"],
             body_html=data["body_html"],
-            attachments=[Attachment.from_json(v) for v in data["attachments"]],
+            attachments=[Attachment.from_json(v) for v in attachments],
         )
 
 

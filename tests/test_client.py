@@ -156,6 +156,46 @@ class TestTempMailClient:
         )
 
     @patch("tempmail.client.requests.Session.request")
+    def test_list_email_messages_no_attachments(self, mock_request):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "messages": [
+                {
+                    "id": "msg1",
+                    "from": "sender@example.com",
+                    "to": "test@temp.io",
+                    "cc": ["cc@example.com"],
+                    "subject": "Test Subject",
+                    "body_text": "Test body",
+                    "body_html": "<p>Test body</p>",
+                    "created_at": "2023-01-01T00:00:00Z",
+                    "attachments": None,
+                }
+            ]
+        }
+        mock_response.headers = self._rate_limit_headers
+        mock_request.return_value = mock_response
+
+        client = TempMailClient("test-api-key")
+        messages: typing.List[EmailMessage] = client.list_email_messages("test@temp.io")
+
+        assert len(messages) == 1
+        assert messages[0] == EmailMessage(
+            id="msg1",
+            from_addr="sender@example.com",
+            to_addr="test@temp.io",
+            cc=["cc@example.com"],
+            subject="Test Subject",
+            body_text="Test body",
+            body_html="<p>Test body</p>",
+            created_at=datetime.datetime(
+                2023, 1, 1, 0, 0, tzinfo=datetime.timezone.utc
+            ),
+            attachments=[],
+        )
+
+    @patch("tempmail.client.requests.Session.request")
     def test_list_email_messages_empty(self, mock_request):
         mock_response = Mock()
         mock_response.status_code = 200
