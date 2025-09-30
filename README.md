@@ -1,6 +1,6 @@
 # Temp Mail Python Library
 
-[![PyPI version](https://badge.fury.io/py/temp-mail-io.svg)](https://badge.fury.io/py/temp-mail)
+[![PyPI version](https://badge.fury.io/py/temp-mail.svg)](https://badge.fury.io/py/temp-mail)
 [![Python Support](https://img.shields.io/pypi/pyversions/temp-mail.svg)](https://pypi.org/project/temp-mail/)
 [![Test Status](https://github.com/temp-mail-io/temp-mail-python/workflows/Test/badge.svg)](https://github.com/temp-mail-io/temp-mail-python/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/temp-mail-io/temp-mail-python/branch/main/graph/badge.svg)](https://codecov.io/gh/temp-mail-io/temp-mail-python)
