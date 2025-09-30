@@ -1,9 +1,9 @@
 """Temp Mail API client implementation."""
 
 import typing
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, overload, Literal
 from urllib.parse import urljoin
-import requests
+import httpx
 
 from . import __version__
 from .models import (
@@ -35,16 +35,38 @@ class TempMailClient:
         self.base_url = base_url
         self.timeout = timeout
 
-        self.session = requests.Session()
-        self.session.headers.update(
-            {
+        self.client = httpx.Client(
+            headers={
                 "X-API-Key": api_key,
                 "Content-Type": "application/json",
                 "User-Agent": f"temp-mail-python/{__version__}",
-            }
+            },
+            timeout=timeout,
         )
 
         self._last_rate_limit: Optional[RateLimit] = None
+
+    @overload
+    def _make_request(
+        self,
+        method: str,
+        endpoint: str,
+        params: Optional[Dict[str, Any]] = None,
+        json_data: Optional[Dict[str, Any]] = None,
+        return_content: Literal[True] = ...,
+        update_rate_limit: bool = True,
+    ) -> bytes: ...
+
+    @overload
+    def _make_request(
+        self,
+        method: str,
+        endpoint: str,
+        params: Optional[Dict[str, Any]] = None,
+        json_data: Optional[Dict[str, Any]] = None,
+        return_content: Literal[False] = ...,
+        update_rate_limit: bool = True,
+    ) -> Dict[str, Any]: ...
 
     def _make_request(
         self,
@@ -66,12 +88,11 @@ class TempMailClient:
         url = urljoin(self.base_url, endpoint)
 
         try:
-            response = self.session.request(
+            response = self.client.request(
                 method=method,
                 url=url,
                 params=params,
                 json=json_data,
-                timeout=self.timeout,
             )
 
             if 200 <= response.status_code < 300:
@@ -92,7 +113,7 @@ class TempMailClient:
                     raise ValidationError(api_response.detail)
                 else:
                     raise TempMailError(api_response.detail)
-        except requests.exceptions.RequestException as e:
+        except httpx.RequestError as e:
             raise TempMailError(f"Request failed: {str(e)}")
 
     def _update_rate_limit_from_headers(self, headers: Any) -> None:
@@ -125,7 +146,10 @@ class TempMailClient:
             json_data["domain_type"] = domain_type.value
 
         data = self._make_request(
-            "POST", "/v1/emails", json_data=json_data if json_data else None
+            "POST",
+            "/v1/emails",
+            json_data=json_data if json_data else None,
+            return_content=False,
         )
 
         return EmailAddress.from_json(data)
@@ -137,7 +161,7 @@ class TempMailClient:
         Returns:
             List[Domain]: Available domains
         """
-        data = self._make_request("GET", "/v1/domains")
+        data = self._make_request("GET", "/v1/domains", return_content=False)
 
         return [Domain.from_json(domain) for domain in data["domains"]]
 
@@ -146,7 +170,9 @@ class TempMailClient:
         email: str,
     ) -> List[EmailMessage]:
         """Get all messages for a specific email address."""
-        data = self._make_request("GET", f"/v1/emails/{email}/messages")
+        data = self._make_request(
+            "GET", f"/v1/emails/{email}/messages", return_content=False
+        )
 
         messages = []
         for msg_data in data["messages"]:
@@ -156,20 +182,24 @@ class TempMailClient:
 
     def get_message(self, message_id: str) -> EmailMessage:
         """Get a specific message by ID."""
-        data = self._make_request("GET", f"/v1/messages/{message_id}")
+        data = self._make_request(
+            "GET", f"/v1/messages/{message_id}", return_content=False
+        )
         return EmailMessage.from_json(data)
 
     def delete_message(self, message_id: str) -> None:
         """Delete a specific message by ID."""
-        self._make_request("DELETE", f"/v1/messages/{message_id}")
+        self._make_request("DELETE", f"/v1/messages/{message_id}", return_content=False)
 
     def delete_email(self, email: str) -> None:
         """Delete an email address and all its messages."""
-        self._make_request("DELETE", f"/v1/emails/{email}")
+        self._make_request("DELETE", f"/v1/emails/{email}", return_content=False)
 
     def get_message_source_code(self, message_id: str) -> str:
         """Get the raw source code of a message."""
-        data = self._make_request("GET", f"/v1/messages/{message_id}/source_code")
+        data = self._make_request(
+            "GET", f"/v1/messages/{message_id}/source_code", return_content=False
+        )
         return data["data"]
 
     def download_attachment(self, attachment_id: str) -> bytes:
@@ -184,7 +214,9 @@ class TempMailClient:
         Get current rate limit information.
         :return: RateLimit object
         """
-        data = self._make_request("GET", "/v1/rate_limit", update_rate_limit=False)
+        data = self._make_request(
+            "GET", "/v1/rate_limit", return_content=False, update_rate_limit=False
+        )
         rate_limit: RateLimit = RateLimit.from_json(data)
         # Also update the last known rate limit since this method doesn't use headers
         self._last_rate_limit = rate_limit
@@ -197,3 +229,16 @@ class TempMailClient:
         It will be None if no requests have been made yet.
         """
         return self._last_rate_limit
+
+    def close(self) -> None:
+        """Close the underlying HTTPX client.
+
+        The client will *not* be usable after this.
+        """
+        self.client.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()
