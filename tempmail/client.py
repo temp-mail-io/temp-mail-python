@@ -9,6 +9,7 @@ from . import __version__
 from .models import (
     RateLimit,
     Domain,
+    DomainType,
     EmailAddress,
     EmailMessage,
     APIErrorResponse,
@@ -107,13 +108,13 @@ class TempMailClient:
         self,
         email: Optional[str] = None,
         domain: Optional[str] = None,
-        domain_type: Optional[str] = None,
+        domain_type: Optional[DomainType] = None,
     ) -> EmailAddress:
         """
         Create a new temporary email address.
         :param email: Optional specific email address to create
         :param domain: Optional domain to use
-        :param domain_type: Optional domain type (e.g., "public", "custom", "premium")
+        :param domain_type: an Optional domain type
         """
         json_data: Dict[str, Any] = {}
         if email:
@@ -121,7 +122,7 @@ class TempMailClient:
         if domain:
             json_data["domain"] = domain
         if domain_type:
-            json_data["domain_type"] = domain_type
+            json_data["domain_type"] = domain_type.value
 
         data = self._make_request(
             "POST", "/v1/emails", json_data=json_data if json_data else None

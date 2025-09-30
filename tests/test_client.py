@@ -50,6 +50,26 @@ class TestTempMailClient:
         assert email == EmailAddress(email="test@example.com", ttl=86400)
 
     @patch("tempmail.client.requests.Session.request")
+    def test_create_email_premium_domain_type(self, mock_request) -> None:
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"email": "test@example.com", "ttl": 86400}
+        mock_response.headers = self._rate_limit_headers
+        mock_request.return_value = mock_response
+
+        client: TempMailClient = TempMailClient("test-api-key")
+        email: EmailAddress = client.create_email(domain_type=DomainType.PREMIUM)
+        assert email == EmailAddress(email="test@example.com", ttl=86400)
+
+        mock_request.assert_called_once_with(
+            method="POST",
+            url="https://api.temp-mail.io/v1/emails",
+            params=None,
+            json={"domain_type": "premium"},
+            timeout=30,
+        )
+
+    @patch("tempmail.client.requests.Session.request")
     def test_create_email_with_options(self, mock_request):
         mock_response = Mock()
         mock_response.status_code = 200

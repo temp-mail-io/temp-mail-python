@@ -82,7 +82,8 @@ email = client.create_email(domain="example.com")
 email = client.create_email(email="mytest@example.com")
 
 # Create with domain type preference
-email = client.create_email(domain_type="premium")
+from tempmail.models import DomainType
+email = client.create_email(domain_type=DomainType.PREMIUM)
 ```
 
 ### Listing Domains
