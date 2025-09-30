@@ -2,6 +2,7 @@ import datetime
 import typing
 import pytest
 
+from httpx import TimeoutException
 from unittest.mock import Mock, patch
 from tempmail import (
     TempMailClient,
@@ -465,6 +466,96 @@ class TestTempMailClient:
     @patch("tempmail.client.httpx.Client.request")
     def test_request_exception(self, mock_request):
         mock_request.side_effect = ConnectError("Connection failed")
+
+        client = TempMailClient("test-api-key")
+        with pytest.raises(TempMailError, match="Request failed"):
+            client.list_domains()
+
+    @patch("tempmail.client.httpx.Client.request")
+    def test_create_email_with_specific_email(self, mock_request):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "email": "specific@example.com",
+            "ttl": 86400,
+        }
+        mock_response.headers = self._rate_limit_headers
+        mock_request.return_value = mock_response
+
+        client = TempMailClient("test-api-key")
+        email = client.create_email(email="specific@example.com")
+        assert email == EmailAddress(email="specific@example.com", ttl=86400)
+
+        mock_request.assert_called_once_with(
+            method="POST",
+            url="https://api.temp-mail.io/v1/emails",
+            params=None,
+            json={"email": "specific@example.com"},
+        )
+
+    def test_context_manager(self):
+        with patch("tempmail.client.httpx.Client.close") as mock_close:
+            with TempMailClient("test-api-key") as client:
+                assert isinstance(client, TempMailClient)
+            mock_close.assert_called_once()
+
+    def test_close_method(self):
+        with patch("tempmail.client.httpx.Client.close") as mock_close:
+            client = TempMailClient("test-api-key")
+            client.close()
+            mock_close.assert_called_once()
+
+    @patch("tempmail.client.httpx.Client.request")
+    def test_create_email_with_empty_json_data(self, mock_request):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"email": "random@example.com", "ttl": 86400}
+        mock_response.headers = self._rate_limit_headers
+        mock_request.return_value = mock_response
+
+        client = TempMailClient("test-api-key")
+        email = client.create_email()
+        assert email == EmailAddress(email="random@example.com", ttl=86400)
+
+        mock_request.assert_called_once_with(
+            method="POST",
+            url="https://api.temp-mail.io/v1/emails",
+            params=None,
+            json=None,
+        )
+
+    def test_last_rate_limit_initial_state(self):
+        client = TempMailClient("test-api-key")
+        assert client.last_rate_limit is None
+
+    @patch("tempmail.client.httpx.Client.request")
+    def test_error_response_with_different_status_codes(self, mock_request):
+        mock_response = Mock()
+        mock_response.status_code = 404
+        mock_response.json.return_value = {
+            "error": {
+                "code": "not_found",
+                "detail": "Message not found",
+                "type": "request_error",
+            },
+            "meta": {"request_id": "123"},
+        }
+        mock_response.headers = {}
+        mock_request.return_value = mock_response
+
+        client = TempMailClient("test-api-key")
+        with pytest.raises(TempMailError, match="Message not found"):
+            client.get_message("non-existent-id")
+
+    def test_httpx_client_timeout_configuration(self):
+        client = TempMailClient("test-api-key", timeout=60)
+        # httpx.Client.timeout returns a Timeout object
+        assert client.client.timeout.read == 60
+        assert client.client.timeout.connect == 60
+
+    @patch("tempmail.client.httpx.Client.request")
+    def test_httpx_specific_error_handling(self, mock_request):
+        mock_request.side_effect = TimeoutException("Request timeout")
 
         client = TempMailClient("test-api-key")
         with pytest.raises(TempMailError, match="Request failed"):
