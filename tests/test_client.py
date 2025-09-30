@@ -13,7 +13,7 @@ from tempmail import (
     ValidationError,
     TempMailError,
 )
-from requests.exceptions import ConnectionError
+from httpx import ConnectError
 from tempmail.models import DomainType, RateLimit, Attachment
 
 
@@ -28,7 +28,7 @@ class TestTempMailClient:
     def test_client_initialization(self) -> None:
         client = TempMailClient("test-api-key")
         assert client.api_key == "test-api-key"
-        assert client.session.headers["X-API-Key"] == "test-api-key"
+        assert client.client.headers["X-API-Key"] == "test-api-key"
 
     def test_client_initialization_with_custom_params(self) -> None:
         client = TempMailClient(
@@ -37,7 +37,7 @@ class TestTempMailClient:
         assert client.base_url == "https://custom.api.com"
         assert client.timeout == 60
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch("tempmail.client.httpx.Client.request")
     def test_create_email_success(self, mock_request) -> None:
         mock_response = Mock()
         mock_response.status_code = 200
@@ -49,7 +49,7 @@ class TestTempMailClient:
         email: EmailAddress = client.create_email()
         assert email == EmailAddress(email="test@example.com", ttl=86400)
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch("tempmail.client.httpx.Client.request")
     def test_create_email_premium_domain_type(self, mock_request) -> None:
         mock_response = Mock()
         mock_response.status_code = 200
@@ -66,10 +66,9 @@ class TestTempMailClient:
             url="https://api.temp-mail.io/v1/emails",
             params=None,
             json={"domain_type": "premium"},
-            timeout=30,
         )
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch("tempmail.client.httpx.Client.request")
     def test_create_email_with_options(self, mock_request):
         mock_response = Mock()
         mock_response.status_code = 200
@@ -87,10 +86,9 @@ class TestTempMailClient:
             url="https://api.temp-mail.io/v1/emails",
             params=None,
             json={"domain": "mydomain.com"},
-            timeout=30,
         )
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch("tempmail.client.httpx.Client.request")
     def test_list_domains_success(self, mock_request) -> None:
         mock_response = Mock()
         mock_response.status_code = 200
@@ -121,7 +119,7 @@ class TestTempMailClient:
             Domain(name="example.io", type=DomainType.PREMIUM),
         ]
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch("tempmail.client.httpx.Client.request")
     def test_list_email_messages_success(self, mock_request):
         mock_response = Mock()
         mock_response.status_code = 200
@@ -175,7 +173,7 @@ class TestTempMailClient:
             ],
         )
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch("tempmail.client.httpx.Client.request")
     def test_list_email_messages_no_attachments(self, mock_request):
         mock_response = Mock()
         mock_response.status_code = 200
@@ -215,7 +213,7 @@ class TestTempMailClient:
             attachments=[],
         )
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch("tempmail.client.httpx.Client.request")
     def test_list_email_messages_empty(self, mock_request):
         mock_response = Mock()
         mock_response.status_code = 200
@@ -232,10 +230,9 @@ class TestTempMailClient:
             url="https://api.temp-mail.io/v1/emails/test@temp.io/messages",
             params=None,
             json=None,
-            timeout=30,
         )
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch("tempmail.client.httpx.Client.request")
     def test_get_message_success(self, mock_request):
         mock_response = Mock()
         mock_response.status_code = 200
@@ -274,10 +271,9 @@ class TestTempMailClient:
             url="https://api.temp-mail.io/v1/messages/msg1",
             params=None,
             json=None,
-            timeout=30,
         )
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch("tempmail.client.httpx.Client.request")
     def test_delete_message_success(self, mock_request):
         mock_response = Mock()
         mock_response.status_code = 200
@@ -293,10 +289,9 @@ class TestTempMailClient:
             url="https://api.temp-mail.io/v1/messages/msg123",
             params=None,
             json=None,
-            timeout=30,
         )
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch("tempmail.client.httpx.Client.request")
     def test_delete_email_success(self, mock_request):
         mock_response = Mock()
         mock_response.status_code = 200
@@ -312,10 +307,9 @@ class TestTempMailClient:
             url="https://api.temp-mail.io/v1/emails/test@temp.io",
             params=None,
             json=None,
-            timeout=30,
         )
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch("tempmail.client.httpx.Client.request")
     def test_get_message_source_code_success(self, mock_request):
         mock_response = Mock()
         mock_response.status_code = 200
@@ -336,10 +330,9 @@ class TestTempMailClient:
             url="https://api.temp-mail.io/v1/messages/msg1/source_code",
             params=None,
             json=None,
-            timeout=30,
         )
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch("tempmail.client.httpx.Client.request")
     def test_download_attachment_success(self, mock_request):
         mock_response = Mock()
         mock_response.status_code = 200
@@ -357,10 +350,9 @@ class TestTempMailClient:
             url="https://api.temp-mail.io/v1/attachments/attachment1",
             params=None,
             json=None,
-            timeout=30,
         )
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch("tempmail.client.httpx.Client.request")
     def test_authentication_error(self, mock_request):
         mock_response = Mock()
         mock_response.status_code = 400
@@ -379,7 +371,7 @@ class TestTempMailClient:
         with pytest.raises(AuthenticationError, match="API token is invalid"):
             client.create_email()
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch("tempmail.client.httpx.Client.request")
     def test_rate_limit_error(self, mock_request):
         mock_response = Mock()
         mock_response.status_code = 429
@@ -401,7 +393,7 @@ class TestTempMailClient:
         ):
             client.create_email()
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch("tempmail.client.httpx.Client.request")
     def test_validation_error(self, mock_request):
         mock_response = Mock()
         mock_response.status_code = 400
@@ -420,7 +412,7 @@ class TestTempMailClient:
         with pytest.raises(ValidationError, match="Invalid domain name"):
             client.create_email(domain="invalid_domain")
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch("tempmail.client.httpx.Client.request")
     def test_api_error(self, mock_request):
         mock_response = Mock()
         mock_response.status_code = 500
@@ -439,7 +431,7 @@ class TestTempMailClient:
         with pytest.raises(TempMailError, match="Internal server error"):
             client.create_email()
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch("tempmail.client.httpx.Client.request")
     def test_get_rate_limit_success(self, mock_request):
         mock_response = Mock()
         mock_response.status_code = 200
@@ -470,9 +462,9 @@ class TestTempMailClient:
             limit=100, remaining=95, used=5, reset=1640995200
         )
 
-    @patch("tempmail.client.requests.Session.request")
+    @patch("tempmail.client.httpx.Client.request")
     def test_request_exception(self, mock_request):
-        mock_request.side_effect = ConnectionError("Connection failed")
+        mock_request.side_effect = ConnectError("Connection failed")
 
         client = TempMailClient("test-api-key")
         with pytest.raises(TempMailError, match="Request failed"):

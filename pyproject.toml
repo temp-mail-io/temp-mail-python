@@ -10,7 +10,7 @@ readme = "README.md"
 keywords = ["temp-mail", "temp-mail-api", "tempmail", "temp-mail-io"]
 requires-python = ">=3.8"
 dependencies = [
-    "requests>=2.25.0",
+    "httpx>=0.25.0, <1",
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -32,7 +32,6 @@ dev = [
     "black>=21.0.0",
     "isort>=5.0.0",
     "mypy>=0.800",
-    "types-requests",
     "setuptools",
 ]
 
