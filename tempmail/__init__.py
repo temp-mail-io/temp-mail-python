@@ -5,6 +5,7 @@ Official Temp Mail API (https://temp-mail.io) Wrapper for Python.
 __version__ = "1.0.1"
 
 from .client import TempMailClient
+from .async_client import AsyncTempMailClient
 from .models import (
     RateLimit,
     Domain,
@@ -21,6 +22,7 @@ from .exceptions import (
 
 __all__ = [
     "TempMailClient",
+    "AsyncTempMailClient",
     "RateLimit",
     "Domain",
     "EmailAddress",
