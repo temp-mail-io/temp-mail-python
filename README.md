@@ -283,4 +283,4 @@ MIT License—see [LICENSE](LICENSE) file for details.
 
 - [Temp Mail API Documentation](https://docs.temp-mail.io)
 - [GitHub Repository](https://github.com/temp-mail-io/temp-mail-python)
-- [PyPI Package](https://pypi.org/project/temp-mail-io/)
+- [PyPI Package](https://pypi.org/project/temp-mail/)
