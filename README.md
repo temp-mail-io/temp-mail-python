@@ -46,6 +46,7 @@ for message in messages:
 - **Delete messages** - Clean up individual messages
 - **Delete emails** - Remove email addresses and all their messages
 - **Rate limit monitoring** - Track your API usage
+- **Async support** - `AsyncTempMailClient` with the same interface for `async`/`await` code
 - **Error handling** - Comprehensive exception handling
 - **Type hints** - Full typing support for better development experience
 
@@ -137,6 +138,50 @@ if last_rate_limit:
     print(f"Last known remaining: {last_rate_limit.remaining}")
 ```
 
+## Async Usage
+
+For `async`/`await` applications, use `AsyncTempMailClient`. It exposes the same
+methods as `TempMailClient`, but each one is a coroutine you `await`.
+
+```python
+import asyncio
+
+from tempmail import AsyncTempMailClient
+
+
+async def main():
+    # Use as an async context manager so the underlying connection is closed
+    async with AsyncTempMailClient("your-api-key") as client:
+        # Create a temporary email address
+        email = await client.create_email()
+        print(f"Your temporary email: {email.email}")
+
+        # Check for messages
+        messages = await client.list_email_messages(email.email)
+        for message in messages:
+            print(f"From: {message.from_addr}")
+            print(f"Subject: {message.subject}")
+
+
+asyncio.run(main())
+```
+
+If you don't use the context manager, close the client explicitly when you're done
+to release the connection pool:
+
+```python
+client = AsyncTempMailClient("your-api-key")
+try:
+    email = await client.create_email()
+finally:
+    await client.close()
+```
+
+Every method available on `TempMailClient` (`create_email`, `list_domains`,
+`list_email_messages`, `get_message`, `get_message_source_code`,
+`download_attachment`, `delete_message`, `delete_email`, `get_rate_limit`) has an
+awaitable equivalent on `AsyncTempMailClient`, and the same exceptions are raised.
+
 ## Error Handling
 
 The library provides specific exception types for different error conditions:
@@ -174,8 +219,8 @@ cd temp-mail-python
 # Install uv (recommended)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install dependencies
-uv sync --dev
+# Install dependencies (including dev tools)
+uv sync --extra dev
 ```
 
 ### Running Tests
